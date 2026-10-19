@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stereogram-maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F2F4F7; --panel:#FFFFFF; --ink:#1C2230; --muted:#5B6476; --line:#D5DAE3;
+  --red:#E0304A; --cyan:#0F94AE; --chip:#E6EAF0;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#12151C; --panel:#1B1F29; --ink:#E7EBF2; --muted:#9AA3B5; --line:#2E3442;
+    --red:#FF5068; --cyan:#3CC3DC; --chip:#262B37;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#12151C; --panel:#1B1F29; --ink:#E7EBF2; --muted:#9AA3B5; --line:#2E3442;
+  --red:#FF5068; --cyan:#3CC3DC; --chip:#262B37;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font:400 16px/1.5 "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+header{max-width:1240px;margin:0 auto;padding:28px 20px 8px}
+h1{
+  font-family:"Bricolage Grotesque", system-ui, sans-serif; font-weight:800;
+  font-size:clamp(40px,8vw,72px); line-height:1; margin:0; letter-spacing:-.02em;
+  text-shadow:-4px 0 var(--red), 4px 0 var(--cyan);
+}
+header p{color:var(--muted);margin:12px 0 0;max-width:60ch}
+main{
+  max-width:1240px;margin:0 auto;padding:16px 20px 40px;
+  display:grid;gap:20px;grid-template-columns:1fr;
+}
+@media (min-width:880px){
+  main{grid-template-columns:340px 1fr;align-items:start}
+  .controls{order:1;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+  .stage{order:2}
+}
+.controls{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;
+  display:flex;flex-direction:column;gap:18px;
+}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+legend,.lbl{font-weight:700;font-size:15px;margin-bottom:6px;padding:0}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{
+  padding:8px 12px;border-radius:999px;background:var(--chip);cursor:pointer;
+  font-size:15px;border:1.5px solid transparent;user-select:none;
+}
+.seg input:checked + label{background:var(--ink);color:var(--paper)}
+.seg input:focus-visible + label{border-color:var(--cyan)}
+input[type=text],select{
+  width:100%;font:inherit;color:var(--ink);background:var(--paper);
+  border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+}
+.filebtn{
+  position:relative;display:inline-block;align-self:flex-start;cursor:pointer;
+  font-weight:700;font-size:15px;padding:11px 14px;border-radius:10px;
+  border:1.5px dashed var(--cyan);color:var(--ink);background:var(--paper);
+}
+.filebtn input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.filebtn:focus-within{outline:2px solid var(--cyan);outline-offset:2px}
+.hint{color:var(--muted);font-size:13px;line-height:1.4}
+.row{display:flex;align-items:center;gap:10px}
+.range{display:flex;flex-direction:column;gap:4px}
+.range .top{display:flex;justify-content:space-between;font-size:15px}
+.range .top b{font-weight:700}
+.range output{color:var(--muted);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--cyan)}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--cyan)}
+.thumbwrap{display:flex;gap:12px;align-items:center}
+#thumb{width:96px;height:auto;border-radius:6px;border:1px solid var(--line);background:#000}
+.thumbwrap small{color:var(--muted);font-size:13px;line-height:1.4}
+.stage{display:flex;flex-direction:column;gap:12px;min-width:0}
+.frame{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;
+}
+#out{display:block;width:100%;height:auto;border-radius:6px;cursor:zoom-in;image-rendering:auto}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+button{
+  font:700 15px/1 "Atkinson Hyperlegible", system-ui, sans-serif;
+  padding:12px 16px;border-radius:10px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);cursor:pointer;
+}
+button.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+#status{min-height:1.5em;color:var(--muted);font-size:14px;margin:0}
+details{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+summary{font-weight:700;cursor:pointer}
+details ol{margin:10px 0 0;padding-left:20px;max-width:62ch}
+details li{margin-bottom:6px}
+[hidden]{display:none !important}
+#overlay{
+  position:fixed;inset:0;background:#000;z-index:10;display:flex;align-items:center;justify-content:center;
+  padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);cursor:zoom-out;
+}
+#overlay img{max-width:100%;max-height:100%;object-fit:contain}
+@media (prefers-reduced-motion:no-preference){ .seg label{transition:background .15s,color .15s} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Stereogram</h1>
+  <p>Maak een echt 3D-verborgen beeld. Alles wordt op je eigen apparaat berekend; er gaat niets naar een server.</p>
+</header>
+
+<main>
+  <section class="controls" aria-label="Instellingen">
+    <fieldset>
+      <legend>Verborgen vorm</legend>
+      <div class="seg" id="shapeSeg">
+        <input type="radio" name="shape" id="s-tekst" value="tekst" checked><label for="s-tekst">Tekst</label>
+        <input type="radio" name="shape" id="s-bol" value="bol"><label for="s-bol">Bol</label>
+        <input type="radio" name="shape" id="s-trap" value="trap"><label for="s-trap">Trappen</label>
+        <input type="radio" name="shape" id="s-eigen" value="eigen"><label for="s-eigen">Eigen dieptekaart</label>
+      </div>
+      <input type="text" id="text" value="3D" maxlength="14" aria-label="Tekst die in 3D verschijnt">
+      <label class="filebtn" id="depthPick" hidden><input type="file" id="depthFile" accept="image/*">Kies dieptekaart uit galerij</label>
+      <div class="thumbwrap">
+        <canvas id="thumb" width="96" height="64" aria-label="Voorbeeld van de dieptekaart"></canvas>
+        <small>Dieptekaart: wit komt naar voren, zwart blijft achter.</small>
+      </div>
+      <label class="row"><input type="checkbox" id="invert"> Diepte omkeren (voor scheel kijken)</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Patroon</legend>
+      <div class="seg">
+        <input type="radio" name="pattern" id="p-kleur" value="kleur" checked><label for="p-kleur">Kleurstippen</label>
+        <input type="radio" name="pattern" id="p-zw" value="zw"><label for="p-zw">Zwart-wit ruis</label>
+        <input type="radio" name="pattern" id="p-eigen" value="eigen"><label for="p-eigen">Eigen tegel</label>
+      </div>
+      <label class="filebtn" id="tilePick" hidden><input type="file" id="tileFile" accept="image/*">Kies patroontegel uit galerij</label>
+      <small class="hint" id="pickHint" hidden>Opent er geen galerij? Dan staat de app waarin je dit bekijkt bestanden kiezen niet toe. Open de pagina dan in Chrome of Firefox.</small>
+    </fieldset>
+
+    <div class="range">
+      <div class="top"><b>Diepte</b><output id="muOut">33%</output></div>
+      <input type="range" id="mu" min="10" max="50" value="33">
+    </div>
+    <div class="range">
+      <div class="top"><b>Stripbreedte</b><output id="stripOut">120 px</output></div>
+      <input type="range" id="strip" min="60" max="200" step="2" value="120">
+    </div>
+    <div>
+      <label class="lbl" for="width" style="display:block">Beeldbreedte</label>
+      <select id="width">
+        <option value="800">800 px</option>
+        <option value="1200" selected>1200 px</option>
+        <option value="1600">1600 px</option>
+        <option value="2000">2000 px</option>
+      </select>
+    </div>
+    <label class="row"><input type="checkbox" id="dots" checked> Hulpstipjes bovenaan</label>
+  </section>
+
+  <section class="stage" aria-label="Resultaat">
+    <div class="frame"><canvas id="out" aria-label="Gegenereerd stereogram; tik voor volledig scherm"></canvas></div>
+    <div class="actions">
+      <button class="primary" id="saveBtn" hidden>Opslaan als PNG</button>
+      <button id="fullBtn">Volledig scherm</button>
+      <button id="shuffleBtn">Nieuw patroon</button>
+    </div>
+    <p id="status" aria-live="polite"></p>
+    <details>
+      <summary>Zo kijk je ernaar</summary>
+      <ol>
+        <li>Houd het scherm recht voor je, op zo'n 30 tot 40 cm.</li>
+        <li>Kijk "door" het scherm heen, alsof je naar iets ver erachter staart.</li>
+        <li>Let op de twee stipjes: ze worden eerst vier. Ontspan je ogen tot het er drie zijn; dan verschijnt de vorm.</li>
+        <li>Lukt het niet? Begin met je neus bijna tegen het scherm en beweeg heel langzaam terug.</li>
+        <li>Kijk je liever scheel (ogen naar binnen)? Zet dan "Diepte omkeren" aan.</li>
+      </ol>
+    </details>
+  </section>
+</main>
+
+<div id="overlay" hidden role="dialog" aria-label="Stereogram op volledig scherm; tik om te sluiten"><img id="overlayImg" alt="Stereogram"></div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const out = $('#out'), octx = out.getContext('2d');
+  const thumb = $('#thumb'), tctx = thumb.getContext('2d');
+  const statusEl = $('#status');
+  const state = {
+    shape:'tekst', text:'3D', pattern:'kleur', mu:.33, strip:120, width:1200,
+    invert:false, dots:true, seed:(Math.random()*1e9)|0, depthImg:null, tileImg:null
+  };
+  let downloads = null;
+
+  function say(msg){ statusEl.textContent = msg; }
+
+  function rng(seed){
+    let s = (seed >>> 0) || 1;
+    return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
+  }
+
+  /* ---------- Dieptekaart ---------- */
+  function makeDepth(W){
+    let H = Math.round(W * 0.66);
+    if (state.shape === 'eigen' && state.depthImg){
+      const im = state.depthImg;
+      H = Math.min(Math.round(W * 1.5), Math.round(W * im.naturalHeight / im.naturalWidth));
+    }
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.fillStyle = '#000'; g.fillRect(0,0,W,H);
+
+    if (state.shape === 'tekst'){
+      const t = (state.text || '').trim() || '3D';
+      let fs = H * 0.62;
+      g.font = `800 ${fs}px "Bricolage Grotesque", system-ui, sans-serif`;
+      const w = g.measureText(t).width;
+      if (w > W * 0.86){ fs *= (W * 0.86) / w; g.font = `800 ${fs}px "Bricolage Grotesque", system-ui, sans-serif`; }
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.filter = `blur(${Math.max(2, Math.round(fs * 0.035))}px)`;
+      g.fillStyle = '#fff'; g.fillText(t, W/2, H/2 + fs*0.04);
+      g.filter = 'none';
+    } else if (state.shape === 'bol'){
+      const img = g.getImageData(0,0,W,H), d = img.data;
+      const cx = W/2, cy = H/2, R = Math.min(W,H) * 0.4;
+      for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+        const dx=(x-cx)/R, dy=(y-cy)/R, r2=dx*dx+dy*dy;
+        if (r2 < 1){ const v = Math.round(Math.sqrt(1-r2)*255); const i=(y*W+x)*4; d[i]=d[i+1]=d[i+2]=v; }
+      }
+      g.putImageData(img,0,0);
+    } else if (state.shape === 'trap'){
+      const cx = W/2, cy = H/2, R = Math.min(W,H) * 0.44;
+      const levels = 4;
+      for (let k=0;k<levels;k++){
+        const v = Math.round(255 * (k+1) / levels);
+        g.fillStyle = `rgb(${v},${v},${v})`;
+        g.beginPath(); g.arc(cx, cy, R * (1 - k*0.22), 0, Math.PI*2); g.fill();
+      }
+    } else if (state.shape === 'eigen' && state.depthImg){
+      g.filter = 'blur(1px)';
+      g.drawImage(state.depthImg, 0, 0, W, H);
+      g.filter = 'none';
+    }
+
+    const px = g.getImageData(0,0,W,H).data;
+    const z = new Float32Array(W*H);
+    for (let i=0,j=0;i<z.length;i++,j+=4){
+      let v = (0.299*px[j] + 0.587*px[j+1] + 0.114*px[j+2]) / 255;
+      z[i] = state.invert ? 1 - v : v;
+    }
+    return { canvas:c, z, W, H };
+  }
+
+  /* ---------- Patroontegel ---------- */
+  function makeTile(tw){
+    const r = rng(state.seed);
+    if (state.pattern === 'eigen' && state.tileImg){
+      const im = state.tileImg;
+      const th = Math.max(16, Math.round(tw * im.naturalHeight / im.naturalWidth));
+      const c = document.createElement('canvas'); c.width = tw; c.height = th;
+      const g = c.getContext('2d'); g.drawImage(im, 0, 0, tw, th);
+      return { data:g.getImageData(0,0,tw,th).data, tw, th };
+    }
+    const th = 256;
+    const c = document.createElement('canvas'); c.width = tw; c.height = th;
+    const g = c.getContext('2d');
+    if (state.pattern === 'zw'){
+      const img = g.createImageData(tw, th), d = img.data;
+      for (let i=0;i<d.length;i+=4){ const v = r() < .5 ? 0 : 255; d[i]=d[i+1]=d[i+2]=v; d[i+3]=255; }
+      return { data:d, tw, th };
+    }
+    const pal = ['#1C2230','#E0304A','#0F94AE','#F2C14E','#F7F7F2','#7B4BD6','#2FB36B'];
+    g.fillStyle = '#F2C14E'; g.fillRect(0,0,tw,th);
+    const n = Math.round(tw * th / 28);
+    for (let k=0;k<n;k++){
+      const x = r()*tw, y = r()*th, rad = 1.5 + r()*5.5;
+      g.fillStyle = pal[(r()*pal.length)|0];
+      for (const ox of [-tw,0,tw]) for (const oy of [-th,0,th]){
+        g.beginPath(); g.arc(x+ox, y+oy, rad, 0, Math.PI*2); g.fill();
+      }
+    }
+    return { data:g.getImageData(0,0,tw,th).data, tw, th };
+  }
+
+  /* ---------- Stereogram (SIRDS-algoritme, Thimbleby/Inglis/Witten) ---------- */
+  function stereogram(depth, tile, mu, E){
+    const { z, W, H } = depth, { data:td, tw, th } = tile;
+    const img = new ImageData(W, H), o = img.data;
+    const same = new Int32Array(W);
+    for (let y=0;y<H;y++){
+      const row = y*W;
+      for (let x=0;x<W;x++) same[x] = x;
+      for (let x=0;x<W;x++){
+        const Z = z[row+x];
+        const s = Math.round((1 - mu*Z) * E / (2 - mu*Z));
+        let l = x - (s >> 1), r = l + s;
+        if (l >= 0 && r < W){
+          let k = same[l];
+          while (k !== l && k !== r){
+            if (k < r) l = k;
+            else { same[l] = r; l = r; r = k; }
+            k = same[l];
+          }
+          same[l] = r;
+        }
+      }
+      const ty = (y % th) * tw;
+      for (let x=W-1;x>=0;x--){
+        const i = (row+x)*4;
+        if (same[x] === x){
+          const j = (ty + (x % tw))*4;
+          o[i]=td[j]; o[i+1]=td[j+1]; o[i+2]=td[j+2];
+        } else {
+          const j = (row + same[x])*4;
+          o[i]=o[j]; o[i+1]=o[j+1]; o[i+2]=o[j+2];
+        }
+        o[i+3] = 255;
+      }
+    }
+    return img;
+  }
+
+  function drawDots(W, H, strip){
+    const y = Math.max(22, Math.round(H*0.045));
+    const rad = Math.max(7, Math.round(strip*0.07));
+    for (const x of [W/2 - strip/2, W/2 + strip/2]){
+      octx.beginPath(); octx.arc(x, y, rad+3, 0, Math.PI*2); octx.fillStyle = '#fff'; octx.fill();
+      octx.beginPath(); octx.arc(x, y, rad, 0, Math.PI*2); octx.fillStyle = '#000'; octx.fill();
+    }
+  }
+
+  /* ---------- Render ---------- */
+  function render(){
+    if (state.shape === 'eigen' && !state.depthImg){
+      say('Kies eerst een dieptekaart (zwart-wit afbeelding) om je eigen vorm te gebruiken.');
+    }
+    if (state.pattern === 'eigen' && !state.tileImg){
+      say('Kies een patroontegel; tot die tijd worden kleurstippen gebruikt.');
+    }
+    const W = state.width, strip = Math.round(state.strip * W / 1200);
+    const depth = makeDepth(W);
+    const savedPattern = state.pattern;
+    if (state.pattern === 'eigen' && !state.tileImg) state.pattern = 'kleur';
+    const tile = makeTile(strip);
+    state.pattern = savedPattern;
+    const img = stereogram(depth, tile, state.mu, strip*2);
+    out.width = depth.W; out.height = depth.H;
+    octx.putImageData(img, 0, 0);
+    if (state.dots) drawDots(depth.W, depth.H, strip);
+    thumb.height = Math.round(96 * depth.H / depth.W);
+    tctx.drawImage(depth.canvas, 0, 0, thumb.width, thumb.height);
+  }
+
+  let timer = 0;
+  function schedule(){
+    clearTimeout(timer);
+    timer = setTimeout(() => { say(''); requestAnimationFrame(render); }, 90);
+  }
+
+  function loadImage(file, cb){
+    const fr = new FileReader();
+    fr.onload = () => {
+      const im = new Image();
+      im.onload = () => cb(im);
+      im.onerror = () => say('Dit bestand kan niet als afbeelding worden geopend. Kies een JPG of PNG.');
+      im.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  }
+
+  /* ---------- Bediening ---------- */
+  document.querySelectorAll('input[name=shape]').forEach(el => el.addEventListener('change', () => {
+    state.shape = el.value;
+    $('#text').hidden = state.shape !== 'tekst';
+    $('#depthPick').hidden = state.shape !== 'eigen';
+    updateHint();
+    if (state.shape === 'eigen' && !state.depthImg) $('#depthFile').click();
+    schedule();
+  }));
+  document.querySelectorAll('input[name=pattern]').forEach(el => el.addEventListener('change', () => {
+    state.pattern = el.value;
+    $('#tilePick').hidden = state.pattern !== 'eigen';
+    updateHint();
+    if (state.pattern === 'eigen' && !state.tileImg) $('#tileFile').click();
+    schedule();
+  }));
+  function updateHint(){
+    $('#pickHint').hidden = !((state.shape === 'eigen' && !state.depthImg) || (state.pattern === 'eigen' && !state.tileImg));
+  }
+  $('#text').addEventListener('input', e => { state.text = e.target.value; schedule(); });
+  $('#invert').addEventListener('change', e => { state.invert = e.target.checked; schedule(); });
+  $('#dots').addEventListener('change', e => { state.dots = e.target.checked; schedule(); });
+  $('#mu').addEventListener('input', e => { state.mu = e.target.value/100; $('#muOut').textContent = e.target.value + '%'; schedule(); });
+  $('#strip').addEventListener('input', e => { state.strip = +e.target.value; $('#stripOut').textContent = e.target.value + ' px'; schedule(); });
+  $('#width').addEventListener('change', e => { state.width = +e.target.value; schedule(); });
+  $('#depthFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) loadImage(f, im => { state.depthImg = im; updateHint(); schedule(); setTimeout(() => say('Dieptekaart geladen: ' + f.name), 150); }); });
+  $('#tileFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) loadImage(f, im => { state.tileImg = im; updateHint(); schedule(); setTimeout(() => say('Patroontegel geladen: ' + f.name), 150); }); });
+  $('#shuffleBtn').addEventListener('click', () => { state.seed = (Math.random()*1e9)|0; schedule(); });
+
+  const overlay = $('#overlay');
+  function openFull(){ $('#overlayImg').src = out.toDataURL('image/png'); overlay.hidden = false; }
+  function closeFull(){ overlay.hidden = true; $('#overlayImg').removeAttribute('src'); }
+  $('#fullBtn').addEventListener('click', openFull);
+  out.addEventListener('click', openFull);
+  overlay.addEventListener('click', closeFull);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !overlay.hidden) closeFull(); });
+
+  let standalone = false;
+  $('#saveBtn').addEventListener('click', () => {
+    if (standalone){
+      out.toBlob(blob => {
+        if (!blob){ say('Het beeld kon niet worden omgezet naar PNG.'); return; }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'stereogram.png';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        say('Opgeslagen in je downloads.');
+      }, 'image/png');
+      return;
+    }
+    if (!downloads) return;
+    out.toBlob(blob => {
+      if (!blob){ say('Het beeld kon niet worden omgezet naar PNG.'); return; }
+      downloads.save({ filename:'stereogram.png', data:blob })
+        .then(() => say('Opgeslagen.'))
+        .catch(err => {
+          const c = err && err.code;
+          if (c === 'declined') say('Niet opgeslagen.');
+          else if (c === 'rate_limited') say('Er staat al een opslagvraag open. Probeer het zo opnieuw.');
+          else if (c === 'too_large') say('Het bestand is te groot. Kies een kleinere beeldbreedte.');
+          else { say('Opslaan is hier niet beschikbaar.'); $('#saveBtn').hidden = true; }
+        });
+    }, 'image/png');
+  });
+
+  function initDownloads(n){
+    if (window.claude && typeof window.claude.use === 'function'){
+      window.claude.use('downloads').then(d => { downloads = d; $('#saveBtn').hidden = !d; }).catch(() => {});
+    } else if (n < 8) setTimeout(() => initDownloads(n+1), 250);
+    else { standalone = true; $('#saveBtn').hidden = false; }
+  }
+  initDownloads(0);
+
+  const start = () => render();
+  if (document.fonts && document.fonts.load){
+    document.fonts.load('800 100px "Bricolage Grotesque"').then(start, start);
+  } else start();
+})();
+</script>
+</body>
+</html>
